@@ -4,10 +4,11 @@ const fs = require('fs-extra');
 const moment = require('moment');
 const request = require('superagent');
 const xlsx = require('node-xlsx').default;
-const obj  = xlsx.parse('./file/dzy/hsPrice/1.xlsx');
+const sleep = require('js-sleep/js-sleep');
+const obj  = xlsx.parse('./file/1.xlsx');
 const {getHeader} = require('./util/duozhuayuUtil');
 const {formatDate} = require('./util/dateUtil');
-const config = require('../../config');
+const config = require('./config');
 const {domain, exportPath} = config.dzy;
 
 let isbnList = [], bookList = [];
@@ -73,6 +74,7 @@ const delBookInfo = async (bookId) => {
 const getAllBookInfo = async () => {
     try {
         for(let isbn of isbnList){
+            await sleep(1000 * 2);
             const book = await getBookInfo(isbn);
             bookList.push(book);
             if(!_.isEmpty(book)){
@@ -135,12 +137,8 @@ const test = async () => {
     try {
         const isbn = "9787208088436";
         const bookId = "217698932564690296";
-        // const bookInfo = await getBookInfo(isbn);
-        // console.info('bookInfo: ', bookInfo);
-
-
-        await executeExcele();
-
+        const bookInfo = await getBookInfo(isbn);
+        console.info('bookInfo: ', bookInfo);
     } catch (e) {
         console.error(e);
         return e;
@@ -148,4 +146,4 @@ const test = async () => {
 };
 
 
-test();
+executeExcele();
