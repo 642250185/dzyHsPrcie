@@ -4,9 +4,8 @@ const config = {
     dzy: {
         domain: 'https://www.duozhuayu.com',
         category_path: '/api/categories',
-        booksDataPath: path.join(__dirname, '..', 'data/books.json'),
-        categoryDataPath: path.join(__dirname, '..', 'data/category.json'),
-        partBooksDataPath: path.join(__dirname, '..', 'data/partBooks.json'),
+        isbnDataPath: path.join(__dirname, '..', 'data/isbn.json'),
+        partIsbnDataPath: path.join(__dirname, '..', 'data/partIsbn.json'),
         exportPath: path.join(__dirname, '..', 'download'),
     },
     category: {
