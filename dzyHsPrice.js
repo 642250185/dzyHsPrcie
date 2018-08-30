@@ -59,7 +59,9 @@ const getBookInfo = async (isbn) => {
         }
         return book;
     } catch (e) {
-        console.error('getBookInfoError: ', e);
+        const {response} = e;
+        const {error} = JSON.parse(response.res.text);
+        console.error('error: ', error);
         // 存储爬取到第几个ISBN
         await fs.ensureDir(_path.join(partIsbnDataPath, '..'));
         fs.writeFileSync(partIsbnDataPath, JSON.stringify({isbn: isbn}));
@@ -143,7 +145,7 @@ const executeExcele = async (list) =>{
         let books = [];
         const booksTable = [['ISBN', 'bookId', '书籍名称','作者', '原始作者', '价格比率', '价格', '原始价格', '新形势价格', '成交量次数', '豆瓣评分', '购买价格(分)', '转换价格(元)', '形势价格', '封面', '来源', '装订', '原始标题', '体积单位', '出版社', '出版时间', '创建时间', '更新时间']];
         if(!list){
-            const books = await getAllBookInfo();
+            books = await getAllBookInfo();
         } else {
             books = list;
         }
@@ -195,17 +197,16 @@ const executeExcele = async (list) =>{
     }
 };
 
-const test = async () => {
-    try {
-        const isbn = "9787208088436";
-        const bookId = "217698932564690296";
-        const bookInfo = await getBookInfo(isbn);
-        console.info('bookInfo: ', bookInfo);
-    } catch (e) {
-        console.error(e);
-        return e;
-    }
-};
-
+// const test = async () => {
+//     try {
+//         const isbn = "9787208088436";
+//         const bookId = "217698932564690296";
+//         const bookInfo = await getBookInfo(isbn);
+//         console.info('bookInfo: ', bookInfo);
+//     } catch (e) {
+//         console.error(e);
+//         return e;
+//     }
+// };
 
 executeExcele();
