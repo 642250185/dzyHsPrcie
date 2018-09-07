@@ -5,7 +5,7 @@ const moment = require('moment');
 const request = require('superagent');
 const xlsx = require('node-xlsx').default;
 const sleep = require('js-sleep/js-sleep');
-const obj  = xlsx.parse('./file/1.xlsx');
+const obj  = xlsx.parse('./file/testd.xlsx');
 const {getHeader} = require('./util/duozhuayuUtil');
 const {formatDate} = require('./util/dateUtil');
 const config = require('./config');
@@ -184,7 +184,7 @@ const executeExcele = async (list) =>{
         }
         const random = Math.ceil(Math.random() * 1000);
         const currentTime = formatDate(new Date(), 'YYYY-MM-DD-HH');
-        const filename = `${exportPath}/dzyBooksPrice-${currentTime}-${random}.xlsx`;
+        const filename = `${exportPath}/多抓鱼书籍回收价-${currentTime}-${random}.xlsx`;
         fs.writeFileSync(filename, xlsx.build([
             {name: '多抓鱼书籍回收价', data: booksTable},
         ]));
