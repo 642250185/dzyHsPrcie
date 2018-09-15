@@ -5,8 +5,9 @@ const moment = require('moment');
 const request = require('superagent');
 const xlsx = require('node-xlsx').default;
 const sleep = require('js-sleep/js-sleep');
-const obj  = xlsx.parse('./file/testd.xlsx');
+const obj  = xlsx.parse('./file/1-6.xlsx');
 const {getHeader} = require('./util/duozhuayuUtil');
+const {changeIP} = require('./util/iputil');
 const {formatDate} = require('./util/dateUtil');
 const config = require('./config');
 const {domain, exportPath, isbnDataPath, partIsbnDataPath} = config.dzy;
@@ -23,11 +24,10 @@ Object.keys(obj).forEach(function(key) {
     fs.writeFileSync(isbnDataPath, JSON.stringify(isbnList));
 })();
 
-const Cookie = 'fish_c0="2|1:0|10:1535020622|7:fish_c0|24:MjAwMTcyNDU5MTAwNDcyNDg3|372be52f21634d71a889b7654df68ddbeac622d72120cd7db541fcff376c9df9"; _ga=GA1.2.1301324295.1535020276; _gid=GA1.2.1623158148.1535020276';
+const Cookie = 'fish_c0="2|1:0|10:1536921306|7:fish_c0|24:NzcwODA5NTc4Nzc3NTE3OTI=|2a919a73b0765360a495e0f10ec26116c92984a78bf2af2a70aa8119836270f7"; _ga=GA1.2.1605651855.1536921304; _gid=GA1.2.1384195111.1536921304';
 
 const getBookInfo = async (isbn) => {
     try {
-        console.info(`ISBN: ${isbn} 添加至回收车。`);
         let book = {};
         let result = await request.post(`${domain}/api/user/books`)
             .set(getHeader()).set('Cookie', Cookie).send({"isbn" : isbn});
@@ -57,17 +57,27 @@ const getBookInfo = async (isbn) => {
             book.created            =   result.book.created;
             book.updated            =   result.book.updated
         }
+        console.info(`ISBN: ${isbn} 添加至回收车。`);
         return book;
     } catch (e) {
-        const {response} = e;
+        console.error(`ISBN: [${isbn}],书籍信息异常!`);
+        return 0;
+        /*const {response} = e;
+        if(_.isEmpty(response)){
+            console.warn(`警告: API接口无返回数据, statusCode: ${e.statusCode}`);
+            return 0;
+        }
         const {error} = JSON.parse(response.res.text);
-        console.error('error: ', error);
+        if(error.name === "BOOK_CANT_BUYBACK"){
+            console.warn(`警告: ISBN为[${isbn}] ${error.message}`);
+            return 0;
+        }
         // 存储爬取到第几个ISBN
         await fs.ensureDir(_path.join(partIsbnDataPath, '..'));
         fs.writeFileSync(partIsbnDataPath, JSON.stringify({isbn: isbn}));
         // 导出已爬取的部分数据
         await executeExcele(bookList);
-        return;
+        return;*/
     }
 };
 
@@ -78,16 +88,22 @@ const delBookInfo = async (bookId) => {
         await console.info(`bookId: ${bookId} 已从回收车删除成功。`);
     } catch (e) {
         console.error('删除失败');
-        console.error('delBookInfoError: ', e);
+        console.error('delError: ', e);
         return e;
     }
 };
 
 const getAllBookInfo = async () => {
     try {
+        let count = 0;
         for(let isbn of isbnList){
+            console.info(`第 ${++count} 个ISBN: [${isbn}]`);
+            // await changeIP();
             await sleep(1000 * 2);
             const book = await getBookInfo(isbn);
+            if(book === 0){
+                continue;
+            }
             if(_.isEmpty(book)){
                 break;
             }
@@ -98,8 +114,13 @@ const getAllBookInfo = async () => {
         }
         return bookList;
     } catch (e) {
-        console.error('getAllBookInfoError: ', e);
-        return [];
+        console.error('AllBookError: ', e);
+        const {response} = e;
+        if(response.res === undefined){
+            console.warn(`警告: 该本书籍信息异常!`);
+            await executeExcele(bookList);
+            return [];
+        }
     }
 };
 
@@ -135,6 +156,8 @@ const executeExcele = async (list) =>{
     try {
         if(!list){
             console.info('开始采集数据......');
+        } else {
+            console.warn('已采集的部分数据......');
         }
         // 检测是否出现中断
         const interruptedIsbn = await getInterruptedIsbn();
@@ -153,9 +176,7 @@ const executeExcele = async (list) =>{
             return;
         }
         console.info(`${books.length} 条书籍价格信息`);
-        console.info('>>> books: %j', books);
         for(let book of books){
-            console.info('>>> book: %j', book);
             let row = [];
             row.push(book.isbn13);
             row.push(book.bookId);
@@ -182,14 +203,17 @@ const executeExcele = async (list) =>{
             row.push(moment(book.updated).format('YYYY-MM-DD HH:mm:ss'));
             booksTable.push(row);
         }
-        const random = Math.ceil(Math.random() * 1000);
-        const currentTime = formatDate(new Date(), 'YYYY-MM-DD-HH');
-        const filename = `${exportPath}/多抓鱼书籍回收价-${currentTime}-${random}.xlsx`;
+        const currentTime = formatDate(new Date(), 'YYYY-MM-DD-HH-mm-ss');
+        const filename = `${exportPath}/多抓鱼书籍回收价#${currentTime}.xlsx`;
         fs.writeFileSync(filename, xlsx.build([
             {name: '多抓鱼书籍回收价', data: booksTable},
         ]));
         console.log(`爬取结束, 成功导出文件: ${filename}`);
         bookList = [];  // 清空
+        if(list){   // 清空中断记录数据
+            await fs.ensureDir(_path.join(partIsbnDataPath, '..'));
+            fs.writeFileSync(partIsbnDataPath, JSON.stringify({isbn: 0}));
+        }
         return;
     } catch (e) {
         console.error('executeExceleError: ', e);
@@ -197,16 +221,5 @@ const executeExcele = async (list) =>{
     }
 };
 
-// const test = async () => {
-//     try {
-//         const isbn = "9787208088436";
-//         const bookId = "217698932564690296";
-//         const bookInfo = await getBookInfo(isbn);
-//         console.info('bookInfo: ', bookInfo);
-//     } catch (e) {
-//         console.error(e);
-//         return e;
-//     }
-// };
 
 executeExcele();
